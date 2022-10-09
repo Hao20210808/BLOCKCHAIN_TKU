@@ -6,7 +6,7 @@
 
   $link = mysqli_connect($host, $dbuser, $dbpw, $dbname);
   if ($link) {
-    //( value > 0 ) => 代表連線成功
+    //( value > 0 ) => connected successfully
     //codes => UTF-8
     
     mysql_query($link, "SET NAMES utf8")
