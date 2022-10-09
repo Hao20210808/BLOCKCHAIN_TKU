@@ -1,7 +1,7 @@
 <?php
   $host = 'localhost';
   $dbuser = 'root';
-  $dbpw = '';
+  $dbpw = 'm1V@81rQweM4*A/x';
   $dbname = 'POPs';
 
   $link = mysqli_connect($host, $dbuser, $dbpw, $dbname);
