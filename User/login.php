@@ -37,7 +37,7 @@
     <br>
     <div>User Passwords: <input type="password" name="userpassword" placeholder="User password" style="width:200px;"/></div>
     <br>
-    <p><button type="submit">登入</button></p>
+    <p><button type="submit">Login</button></p>
     <p>If you forget your account password, please contact<a href="MainPage.php?page=contact" style="color: blue">System Administrator</a></p>
     <p>Don't have an administrator account? Click<a href="MainPage.php?page=register" style="color: blue">Register</a></p>
   </form>
