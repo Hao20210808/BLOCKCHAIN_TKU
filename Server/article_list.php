@@ -19,10 +19,10 @@
 	</head>
 
 
-//event_article_id 事件表單ID
-//event_title      事件表單主題
-//event_content    事件表單敘述
-//event_edit_date  事件編輯日期
+<!--event_article_id 事件表單ID-->
+<!--event_title      事件表單主題-->
+<!--event_content    事件表單敘述-->
+<!--event_edit_date  事件編輯日期-->
 
 
 	<body>
