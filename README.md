@@ -17,6 +17,6 @@
 - User 
 => files present **User Account** and **User interface**.
 
-
-# To add as a contributor, please edit the README file and just delete your name, then save your work
+# Others
+- To add as a contributor, please edit the README file and just delete your name, then save your work
   - 409850384 鄭宇謙
