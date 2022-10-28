@@ -16,6 +16,8 @@
 => files **store temporary information** (login account, shopping cart, etc.) on the server.
 - User 
 => files present **User Account** and **User interface**.
+- images
+=> images stored folder
 
 # Others
 - To add as a contributor, please edit the README file and just delete your name, then save your work
