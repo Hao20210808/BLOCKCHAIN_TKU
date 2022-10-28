@@ -4,7 +4,7 @@
       <div class="col-xs-12">
         <p class="text-center">
           <?php 
-            echo "&copy;" . date("Y") . "  by.Project of practice course  " 
+            echo "&copy;" . date("Y") . "  by.Project of practice course  " . "最佳瀏覽解析度 1280*720 Chrome / FF / IE10或以上"
           ?>
           Will.
         </p>
