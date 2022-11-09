@@ -2,7 +2,7 @@
 # (1) Genesis block -> hash
 # (2) -> block -> hash
 
-def add_transaction_to_block(self, block):
+def addTransactionToBlock(self, block):
     self.pending_transactions.sort(key=lambda x: x.fee, reverse=True)
     
     if len(self.pending_transactions) > self.block_limitation:
