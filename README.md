@@ -16,9 +16,14 @@ A web page built on blockchain technology
 
 
 ## Using tools / languages
-
+- HTML:
+- Python:
+- JavaScript:
 
 ## Functions:
 
 
 ## Folder description:
+
+
+## Photoshots:
