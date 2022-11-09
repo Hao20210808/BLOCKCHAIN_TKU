@@ -9,21 +9,21 @@ A web page built on blockchain technology
 : the general notes on the project.
 
 
-## Using port:
+### Using port:
 
 
-## Best viewed with:
+### Best viewed with:
 
 
-## Using tools / languages
+### Using tools / languages
 - HTML:
 - Python:
 - JavaScript:
 
-## Functions:
+### Functions:
 
 
-## Folder description:
+### Folder description:
 
 
-## Photoshots:
+### Photoshots:
