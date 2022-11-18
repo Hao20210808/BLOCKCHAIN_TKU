@@ -1,5 +1,11 @@
 import hashlib
+import pickle
+import socket
+import sys
+import threading
 import time
+
+import rsa
 
 
 class Transaction:
@@ -33,11 +39,21 @@ class BlockChain:
         self.chain = []
         self.pending_transactions = []
 
+        # For P2P connection
+        self.socket_host = "127.0.0.1"
+        self.socket_port = int(sys.argv[1])
+        self.start_socket_server()
+
     def create_genesis_block(self):
         print("Create genesis block...")
         new_block = Block('Hello World!', self.difficulty, 'lkm543', self.miner_rewards)
         new_block.hash = self.get_hash(new_block, 0)
         self.chain.append(new_block)
+
+    def initialize_transaction(self, sender, receiver, amount, fee, message):
+        # No need to check balance
+        new_transaction = Transaction(sender, receiver, amount, fee, message)
+        return new_transaction
 
     def transaction_to_string(self, transaction):
         transaction_dict = {
@@ -78,7 +94,6 @@ class BlockChain:
             transcation_accepted = self.pending_transactions
             self.pending_transactions = []
         block.transactions = transcation_accepted
-
 
     def mine_block(self, miner):
         start = time.process_time()
@@ -145,3 +160,108 @@ class BlockChain:
             previous_hash = block.hash
         print("Hash correct!")
         return True
+
+    def generate_address(self):
+        public, private = rsa.newkeys(512)
+        public_key = public.save_pkcs1()
+        private_key = private.save_pkcs1()
+        return self.get_address_from_public(public_key), \
+            self.extract_from_private(private_key)
+
+    def get_address_from_public(self, public):
+        address = str(public).replace('\\n','')
+        address = address.replace("b'-----BEGIN RSA PUBLIC KEY-----", '')
+        address = address.replace("-----END RSA PUBLIC KEY-----'", '')
+        address = address.replace(' ', '')
+        return address
+
+    def extract_from_private(self, private):
+        private_key = str(private).replace('\\n','')
+        private_key = private_key.replace("b'-----BEGIN RSA PRIVATE KEY-----", '')
+        private_key = private_key.replace("-----END RSA PRIVATE KEY-----'", '')
+        private_key = private_key.replace(' ', '')
+        return private_key
+
+    def add_transaction(self, transaction, signature):
+        public_key = '-----BEGIN RSA PUBLIC KEY-----\n'
+        public_key += transaction.sender
+        public_key += '\n-----END RSA PUBLIC KEY-----\n'
+        public_key_pkcs = rsa.PublicKey.load_pkcs1(public_key.encode('utf-8'))
+        transaction_str = self.transaction_to_string(transaction)
+        if transaction.fee + transaction.amounts > self.get_balance(transaction.sender):
+            return False, "Balance not enough!"
+        try:
+            # 驗證發送者
+            rsa.verify(transaction_str.encode('utf-8'), signature, public_key_pkcs)
+            self.pending_transactions.append(transaction)
+            return True, "Authorized successfully!"
+        except Exception:
+            return False, "RSA Verified wrong!"
+
+    def start(self):
+        address, private = self.generate_address()
+        print(f"Miner address: {address}")
+        print(f"Miner private: {private}")
+        self.create_genesis_block()
+        while(True):
+            self.mine_block(address)
+            self.adjust_difficulty()
+
+    def start_socket_server(self):
+        t = threading.Thread(target=self.wait_for_socket_connection)
+        t.start()
+
+    def wait_for_socket_connection(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind((self.socket_host, self.socket_port))
+            s.listen()
+            while True:
+                conn, address = s.accept()
+                
+                client_handler = threading.Thread(
+                    target=self.receive_socket_message,
+                    args=(conn, address)
+                )
+                client_handler.start()
+
+    def receive_socket_message(self, connection, address):
+        with connection:
+            print(f'Connected by: {address}')
+            while True:
+                message = connection.recv(1024)
+                print(f"[*] Received: {message}")
+                try:
+                    parsed_message = pickle.loads(message)
+                except Exception:
+                    print(f"{message} cannot be parsed")
+                if message:
+                    if parsed_message["request"] == "get_balance":
+                        print("Start to get the balance for client...")
+                        address = parsed_message["address"]
+                        balance = self.get_balance(address)
+                        response = {
+                            "address": address,
+                            "balance": balance
+                        }
+                    elif parsed_message["request"] == "transaction":
+                        print("Start to transaction for client...")
+                        new_transaction = parsed_message["data"]
+                        result, result_message = self.add_transaction(
+                            new_transaction,
+                            parsed_message["signature"]
+                        )
+                        response = {
+                            "result": result,
+                            "result_message": result_message
+                        }
+                    else:
+                        response = {
+                            "message": "Unknown command."
+                        }
+                    response_bytes = str(response).encode('utf8')
+                    connection.sendall(response_bytes)
+
+
+if __name__ == '__main__':
+    block = BlockChain()
+    block.start()
