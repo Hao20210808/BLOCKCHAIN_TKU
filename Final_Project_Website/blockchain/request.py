@@ -5,8 +5,8 @@ src = ''
 r = request.get(url)
 data = json.load(json_file)
 for transaction in data:
-  sender = transaction['sender']
-  receiver = transaction['receiver']
+  sender = transaction['sender_id']
+  receiver = transaction['receiver_id']
   amounts = transaction['amounts']
   fee = transaction['fee']
   message = transaction['message']
