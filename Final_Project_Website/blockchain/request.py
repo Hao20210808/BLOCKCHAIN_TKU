@@ -18,7 +18,9 @@ for transaction in data:
     'fee':fee,
     'message':message
   }    
-
+if 404:
+  return 'Request Failed!'
+  
 if __name__ == '__main__':
     block = BlockChain()
     block.start()
