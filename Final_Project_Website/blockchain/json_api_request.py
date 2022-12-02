@@ -4,14 +4,21 @@ import json
 src = ''
 r = request.get(url)
 data = json.load(json_file)
-for block in data:
-  name = block['name']
-  email = block['email']
-  balance = block['balance']
+for transaction in data:
+  sender = transaction['sender']
+  receiver = transaction['receiver']
+  amounts = transaction['amounts']
+  fee = transaction['fee']
+  message = transaction['message']
     
-  person_block = {
-    'name':name,
-    'email':email,
-    'balance':balance
+  transaction_list = {
+    'sender':sender,
+    'receiver':receiver,
+    'amounts':amounts,
+    'fee':fee,
+    'message':message
   }    
-  
+
+if __name__ == '__main__':
+    block = BlockChain()
+    block.start()
