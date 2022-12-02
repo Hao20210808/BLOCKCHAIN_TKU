@@ -4,6 +4,7 @@ import socket
 import sys
 import threading
 import time
+import random
 
 import rsa
 
@@ -42,6 +43,14 @@ class BlockChain:
         # For P2P connection
         self.socket_host = "127.0.0.1"
         self.socket_port = int(sys.argv[1])
+        self.node_address = {f"{self.socket_host}:{self.socket_port}"}
+        self.connection_nodes = {}
+        if len(sys.argv) == 3:
+            self.clone_blockchain(sys.argv[2])
+            print(f"Node list: {self.node_address}")
+            self.broadcast_message_to_nodes("add_node", self.socket_host+":"+str(self.socket_port))
+        # For broadcast block
+        self.receive_verified_block = False
         self.start_socket_server()
 
     def create_genesis_block(self):
@@ -105,13 +114,20 @@ class BlockChain:
         new_block.previous_hash = last_block.hash
         new_block.difficulty = self.difficulty
         new_block.hash = self.get_hash(new_block, new_block.nonce)
+        new_block.nonce = random.getrandbits(32)
 
         while new_block.hash[0: self.difficulty] != '0' * self.difficulty:
             new_block.nonce += 1
             new_block.hash = self.get_hash(new_block, new_block.nonce)
+            if self.receive_verified_block:
+                print(f"[**] Verified received block. Mine next!")
+                self.receive_verified_block = False
+                return False
+
+        self.broadcast_block(new_block)
 
         time_consumed = round(time.process_time() - start, 5)
-        print(f"Hash found: {new_block.hash} @ difficulty {self.difficulty}, time cost: {time_consumed}s")
+        print(f"Hash: {new_block.hash} @ diff {self.difficulty}; {time_consumed}s")
         self.chain.append(new_block)
 
     def adjust_difficulty(self):
@@ -202,7 +218,8 @@ class BlockChain:
         address, private = self.generate_address()
         print(f"Miner address: {address}")
         print(f"Miner private: {private}")
-        self.create_genesis_block()
+        if len(sys.argv) < 3:
+            self.create_genesis_block()
         while(True):
             self.mine_block(address)
             self.adjust_difficulty()
@@ -217,7 +234,6 @@ class BlockChain:
             s.listen()
             while True:
                 conn, address = s.accept()
-                
                 client_handler = threading.Thread(
                     target=self.receive_socket_message,
                     args=(conn, address)
@@ -226,10 +242,14 @@ class BlockChain:
 
     def receive_socket_message(self, connection, address):
         with connection:
-            print(f'Connected by: {address}')
+            # print(f'Connected by: {address}')
+            address_concat = address[0]+":"+str(address[1])
             while True:
-                message = connection.recv(1024)
-                print(f"[*] Received: {message}")
+                message = b""
+                while True:
+                    message += connection.recv(4096)
+                    if len(message) % 4096:
+                        break
                 try:
                     parsed_message = pickle.loads(message)
                 except Exception:
@@ -254,6 +274,32 @@ class BlockChain:
                             "result": result,
                             "result_message": result_message
                         }
+                        if result:
+                            self.broadcast_transaction(new_transaction)
+                    # 接收到同步區塊的請求
+                    elif parsed_message["request"] == "clone_blockchain":
+                        print(f"[*] Receive blockchain clone request by {address}...")
+                        message = {
+                            "request": "upload_blockchain",
+                            "blockchain_data": self
+                        }
+                        connection.sendall(pickle.dumps(message))
+                        continue
+                    # 接收到挖掘出的新區塊
+                    elif parsed_message["request"] == "broadcast_block":
+                        print(f"[*] Receive block broadcast by {address}...")
+                        self.receive_broadcast_block(parsed_message["data"])
+                        continue
+                    # 接收到廣播的交易
+                    elif parsed_message["request"] == "broadcast_transaction":
+                        print(f"[*] Receive transaction broadcast by {address}...")
+                        self.pending_transactions.append(parsed_message["data"])
+                        continue
+                    # 接收到新增節點的請求
+                    elif parsed_message["request"] == "add_node":
+                        print(f"[*] Receive add_node broadcast by {address}...")
+                        self.node_address.add(parsed_message["data"])
+                        continue
                     else:
                         response = {
                             "message": "Unknown command."
@@ -261,6 +307,76 @@ class BlockChain:
                     response_bytes = str(response).encode('utf8')
                     connection.sendall(response_bytes)
 
+    def clone_blockchain(self, address):
+        print(f"Start to clone blockchain by {address}")
+        target_host = address.split(":")[0]
+        target_port = int(address.split(":")[1])
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect((target_host, target_port))
+        message = {"request": "clone_blockchain"}
+        client.send(pickle.dumps(message))
+        response = b""
+        print(f"Start to receive blockchain data by {address}")
+        while True:
+            response += client.recv(4096)
+            if len(response) % 4096:
+                break
+        client.close()
+        response = pickle.loads(response)["blockchain_data"]
+
+        self.adjust_difficulty_blocks = response.adjust_difficulty_blocks
+        self.difficulty = response.difficulty
+        self.block_time = response.block_time
+        self.miner_rewards = response.miner_rewards
+        self.block_limitation = response.block_limitation
+        self.chain = response.chain
+        self.pending_transactions = response.pending_transactions
+        self.node_address.update(response.node_address)
+
+    def broadcast_block(self, new_block):
+        self.broadcast_message_to_nodes("broadcast_block", new_block)
+
+    def broadcast_transaction(self, new_transaction):
+        self.broadcast_message_to_nodes("broadcast_transaction", new_transaction)
+
+    def broadcast_message_to_nodes(self, request, data=None):
+        address_concat = self.socket_host + ":" + str(self.socket_port)
+        message = {
+            "request": request,
+            "data": data
+        }
+        for node_address in self.node_address:
+            if node_address != address_concat:
+                target_host = node_address.split(":")[0]
+                target_port = int(node_address.split(":")[1])
+                client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                client.connect((target_host, target_port))
+                client.sendall(pickle.dumps(message))
+                client.close()
+
+    def receive_broadcast_block(self, block_data):
+        last_block = self.chain[-1]
+        # Check the hash of received block
+        if block_data.previous_hash != last_block.hash:
+            print("[**] Received block error: Previous hash not matched!")
+            return False
+        elif block_data.difficulty != self.difficulty:
+            print("[**] Received block error: Difficulty not matched!")
+            return False
+        elif block_data.hash != self.get_hash(block_data, block_data.nonce):
+            print(block_data.hash)
+            print("[**] Received block error: Hash calculation not matched!")
+            return False
+        else:
+            if block_data.hash[0: self.difficulty] == '0' * self.difficulty:
+                for transaction in block_data.transactions:
+                        self.pending_transaction.remove(transaction)
+                self.receive_verified_block = True
+                self.chain.append(block_data)
+                return True
+            else:
+                print(f"[**] Received block error: Hash not matched by diff!")
+                return False
 
 if __name__ == '__main__':
     block = BlockChain()
