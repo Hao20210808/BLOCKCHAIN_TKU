@@ -207,7 +207,7 @@ class BlockChain:
         if transaction.fee + transaction.amounts > self.get_balance(transaction.sender):
             return False, "Balance not enough!"
         try:
-            # 驗證發送者
+            # verified the sender
             rsa.verify(transaction_str.encode('utf-8'), signature, public_key_pkcs)
             self.pending_transactions.append(transaction)
             return True, "Authorized successfully!"
@@ -276,7 +276,7 @@ class BlockChain:
                         }
                         if result:
                             self.broadcast_transaction(new_transaction)
-                    # 接收到同步區塊的請求
+# received the clone blockchain (request of sync block)
                     elif parsed_message["request"] == "clone_blockchain":
                         print(f"[*] Receive blockchain clone request by {address}...")
                         message = {
@@ -285,17 +285,17 @@ class BlockChain:
                         }
                         connection.sendall(pickle.dumps(message))
                         continue
-                    # 接收到挖掘出的新區塊
+# recrived the broadcast block (new mined block)
                     elif parsed_message["request"] == "broadcast_block":
                         print(f"[*] Receive block broadcast by {address}...")
                         self.receive_broadcast_block(parsed_message["data"])
                         continue
-                    # 接收到廣播的交易
+# received the broadcast transaction
                     elif parsed_message["request"] == "broadcast_transaction":
                         print(f"[*] Receive transaction broadcast by {address}...")
                         self.pending_transactions.append(parsed_message["data"])
                         continue
-                    # 接收到新增節點的請求
+# received the request of add node
                     elif parsed_message["request"] == "add_node":
                         print(f"[*] Receive add_node broadcast by {address}...")
                         self.node_address.add(parsed_message["data"])
