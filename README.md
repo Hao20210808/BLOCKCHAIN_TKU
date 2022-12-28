@@ -9,3 +9,8 @@ A web page built on blockchain technology
 : the general notes on the project.
 - [**Codes (Google Drive)**](https://drive.google.com/drive/folders/19OIjRziG5FzqJJDh0q4lm-QudUilrPwI?usp=share_link)
 : API using Blockchain tech.
+
+### Status: Finish the prototype
+### Blockchain architecture
+Drawing software: **Draw.io (diagrams.net)**
+![figure](/images/DataLayers.png)
